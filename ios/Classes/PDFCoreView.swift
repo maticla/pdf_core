@@ -101,6 +101,8 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
         pdfView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
         
         pdfView.frame = self.view.bounds
+        
+        removeScrollIndicators()
 
         DispatchQueue.global().async {
             //let temp = PDFDocument(url: URL(string: "https://www.cambridgeenglish.org/latinamerica/images/165873-yle-sample-papers-flyers-vol-1.pdf")!)
@@ -128,8 +130,34 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
     
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
-        pdfView.scrollView?.showsVerticalScrollIndicator = false
-        pdfView.scrollView?.showsHorizontalScrollIndicator = false
+        removeScrollIndicators()
+    }
+    
+    func removeScrollIndicators() {
+        for view in pdfView.subviews {
+            if let scrollView = findUIScrollView(of: view) {
+                print("Yep")
+                scrollView.showsVerticalScrollIndicator = false
+                scrollView.showsHorizontalScrollIndicator = false
+            }
+        }
+    }
+    
+    private func findUIScrollView(of uiView: UIView) -> UIScrollView? {
+        if let scrollView = uiView as? UIScrollView {
+            return scrollView
+        }
+        
+        for view in uiView.subviews {
+            if let scrollView = view as? UIScrollView {
+                return scrollView
+            }
+            
+            if !view.subviews.isEmpty {
+                return findUIScrollView(of: view)
+            }
+        }
+        return nil
     }
 
     
@@ -193,18 +221,5 @@ class CustomPDFViewSubclass: PDFView {
             
             mChannel?.invokeMethod("tap", arguments: [actualX, actualY])
         }
-    }
-}
-
-
-extension PDFView {
-    var scrollView: UIScrollView? {
-        guard let pageViewControllerContentView = subviews.first else { return nil }
-        for view in pageViewControllerContentView.subviews {
-            guard let scrollView = view as? UIScrollView else { continue }
-            return scrollView
-        }
-
-        return nil
     }
 }
