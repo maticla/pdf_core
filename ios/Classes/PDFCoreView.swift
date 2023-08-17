@@ -126,6 +126,13 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
         }
     }
     
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        pdfView.scrollView?.showsVerticalScrollIndicator = false
+        pdfView.scrollView?.showsHorizontalScrollIndicator = false
+    }
+
+    
     @objc private func handlePageChange(notification: Notification) {
         let currentPageIndex = pdfView.document!.index(for: pdfView.currentPage!)
         print("Page changed! Current page index: \(currentPageIndex)")
@@ -186,5 +193,18 @@ class CustomPDFViewSubclass: PDFView {
             
             mChannel?.invokeMethod("tap", arguments: [actualX, actualY])
         }
+    }
+}
+
+
+extension PDFView {
+    var scrollView: UIScrollView? {
+        guard let pageViewControllerContentView = subviews.first else { return nil }
+        for view in pageViewControllerContentView.subviews {
+            guard let scrollView = view as? UIScrollView else { continue }
+            return scrollView
+        }
+
+        return nil
     }
 }
