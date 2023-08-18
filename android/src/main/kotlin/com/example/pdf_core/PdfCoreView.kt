@@ -32,7 +32,6 @@ import java.io.InputStream
 
 class PdfCoreView internal constructor(context: Context, messenger: BinaryMessenger, id: Int, args: Any?) : PlatformView, MethodCallHandler, OnLoadCompleteListener, OnPageChangeListener {
 
-    private val webView: WebView
     //private val imageView: ImageView
     private val methodChannel: MethodChannel
 
@@ -45,7 +44,6 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
     }
 
     init {
-        webView = WebView(context)
 
         val inflater = LayoutInflater.from(context)
         val view = inflater.inflate(R.layout.image_layout, null)
@@ -53,7 +51,6 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
 
 
         // Set client so that you can interact within WebView
-        webView.webViewClient = WebViewClient()
         methodChannel = MethodChannel(messenger, "plugins.maticla/pdf_core_$id")
         // Init methodCall Listener
         methodChannel.setMethodCallHandler(this)
@@ -165,7 +162,6 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
 
     // Destroy WebView when PlatformView is destroyed
     override fun dispose() {
-        webView.destroy()
     }
 
     override fun loadComplete(nbPages: Int) {
