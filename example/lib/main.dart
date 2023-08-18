@@ -87,6 +87,7 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           leadingWidth: 100.0,
           title: const Text('PDFC'),
+          centerTitle: true,
           leading: Padding(
             padding: const EdgeInsets.only(left: 8.0, top: 8.0),
             child: Text('X: ${tapPosition.dx.toStringAsFixed(2)}\nY: ${tapPosition.dy.toStringAsFixed(2)}'),

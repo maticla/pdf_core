@@ -32,12 +32,13 @@ class PDFCoreEngine extends StatelessWidget {
         return AndroidView(
           viewType: 'plugins.maticla/pdf_core',
           onPlatformViewCreated: _onPlatformViewCreated,
+          creationParams: pdfBytes,
+          creationParamsCodec: const StandardMessageCodec(),
         );
       case TargetPlatform.iOS:
         return UiKitView(
           viewType: 'plugins.maticla/pdf_core',
           onPlatformViewCreated: _onPlatformViewCreated,
-          //creationParams: const <String, dynamic>{'podatek': 'To je creation parameter is flutterja!'},
           creationParams: pdfBytes,
           creationParamsCodec: const StandardMessageCodec(),
         );

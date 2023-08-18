@@ -16,6 +16,8 @@ import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.github.barteksc.pdfviewer.PDFView
+import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener
 import com.github.barteksc.pdfviewer.util.FitPolicy
 import com.shockwave.pdfium.PdfiumCore
 import io.flutter.plugin.common.BinaryMessenger
@@ -28,22 +30,15 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 
-
-fun getScreenWidth(): Int {
-    return Resources.getSystem().displayMetrics.widthPixels
-}
-
-fun getScreenHeight(): Int {
-    return Resources.getSystem().displayMetrics.heightPixels
-}
-
-class PdfCoreView internal constructor(context: Context, messenger: BinaryMessenger, id: Int) : PlatformView, MethodCallHandler {
+class PdfCoreView internal constructor(context: Context, messenger: BinaryMessenger, id: Int, args: Any?) : PlatformView, MethodCallHandler, OnLoadCompleteListener, OnPageChangeListener {
 
     private val webView: WebView
     //private val imageView: ImageView
     private val methodChannel: MethodChannel
 
     private var emptyView: View = View(context)
+    private var numberOfPages: Int = 0
+    private lateinit var pdfView: PDFView
 
     override fun getView(): View {
         return emptyView
@@ -54,7 +49,8 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
 
         val inflater = LayoutInflater.from(context)
         val view = inflater.inflate(R.layout.image_layout, null)
-        val pdfView = view.findViewById<PDFView>(R.id.pdfView)
+        pdfView = view.findViewById<PDFView>(R.id.pdfView)
+
 
         // Set client so that you can interact within WebView
         webView.webViewClient = WebViewClient()
@@ -62,39 +58,45 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
         // Init methodCall Listener
         methodChannel.setMethodCallHandler(this)
 
-        val file: File = File(context.cacheDir, FILENAME)
-        if (!file.exists()) {
-            var asset: InputStream? = null
-            try {
-                asset = context.resources.openRawResource(R.raw.ilovepdf_merged)
-                var output: FileOutputStream? = null
-                output = FileOutputStream(file)
-                val buffer = ByteArray(1024)
-                var size: Int
-                while (asset.read(buffer).also { size = it } != -1) {
-                    output.write(buffer, 0, size)
-                }
-                asset.close()
-                output.close()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
-        val fdx = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+        val pdfBytes = args as ByteArray
+
+//        val file: File = File(context.cacheDir, FILENAME)
+//        if (!file.exists()) {
+//            var asset: InputStream? = null
+//            try {
+//                asset = context.resources.openRawResource(R.raw.ilovepdf_merged)
+//                var output: FileOutputStream? = null
+//                output = FileOutputStream(file)
+//                val buffer = ByteArray(1024)
+//                var size: Int
+//                while (asset.read(buffer).also { size = it } != -1) {
+//                    output.write(buffer, 0, size)
+//                }
+//                asset.close()
+//                output.close()
+//            } catch (e: IOException) {
+//                e.printStackTrace()
+//            }
+//        }
+//        val fdx = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
 
         val core = PdfiumCore(context)
-        val doc = core.newDocument(fdx)
+        val doc = core.newDocument(pdfBytes)
 
         pdfView.useBestQuality(true)
         pdfView.maxZoom = 5.0F
         com.github.barteksc.pdfviewer.util.Constants.THUMBNAIL_RATIO = 1f
         com.github.barteksc.pdfviewer.util.Constants.PART_SIZE = 600f
-        pdfView.fromFile(file)
-                .pageFitPolicy(FitPolicy.WIDTH)
+        pdfView.fromBytes(pdfBytes)
+                .onLoad(this)
+                .onPageChange(this)
+                .pageFitPolicy(FitPolicy.BOTH)
                 .swipeHorizontal(true)
                 .pageSnap(true)
                 .pageFling(true)
                 .fitEachPage(true)
+                .enableSwipe(pdfView.zoom <= 1.0)
+                .enableDoubletap(true)
                 .enableAntialiasing(true)
                 .onTap { e ->
                     // View to Document conversion
@@ -131,6 +133,8 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
 
                     Log.d("COREPDFREADER", "X: $resultX, Y: $resultY")
 
+                    methodChannel.invokeMethod("tap", floatArrayOf(resultX, resultY))
+
                     true
                 }
                 .load()
@@ -138,130 +142,40 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
         emptyView = view
     }
 
-//    init {
-//        val inflater = LayoutInflater.from(context)
-//        val view = inflater.inflate(R.layout.image_layout, null)
-//        // Init WebView
-//        webView = WebView(context)
-//        imageView = ImageView(context)
-//        //val bmap = generateImageBitmap()
-//        //imageView.setImageBitmap(bmap)
-//        //emptyView = imageView
-//        emptyView = view
-//        val pv = PhotoView(context)
-//
-//        // Set client so that you can interact within WebView
-//        webView.webViewClient = WebViewClient()
-//        methodChannel = MethodChannel(messenger, "plugins.maticla/pdf_core_$id")
-//        // Init methodCall Listener
-//        methodChannel.setMethodCallHandler(this)
-//
-//        Log.d("PARCELFD_BEFORE", "Before executing all fd stuff")
-//
-//
-//        val resources = context.resources
-//        val afd = resources.openRawResourceFd(R.raw.ilovepdf_merged)
-//        val parcelFileDescriptor = afd.parcelFileDescriptor
-//
-//        Log.d("PARCELFD", parcelFileDescriptor.toString())
-//
-//        // this is needed because pdfrenderer is sayign that pdf is corrupted for sm reason
-//        val file: File = File(context.cacheDir, FILENAME)
-//        if (!file.exists()) {
-//            var asset: InputStream? = null
-//            try {
-//                asset = context.resources.openRawResource(R.raw.ilovepdf_merged)
-//                var output: FileOutputStream? = null
-//                output = FileOutputStream(file)
-//                val buffer = ByteArray(1024)
-//                var size: Int
-//                while (asset.read(buffer).also { size = it } != -1) {
-//                    output.write(buffer, 0, size)
-//                }
-//                asset.close()
-//                output.close()
-//            } catch (e: IOException) {
-//                e.printStackTrace()
-//            }
-//        }
-//
-//
-//
-//
-//        val fdx = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
-//        val pdfRenderer: PdfRenderer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-//            PdfRenderer(fdx)
-//        } else {
-//            TODO("VERSION.SDK_INT < LOLLIPOP")
-//        }
-//
-//        val pageCount = pdfRenderer.pageCount
-//
-//        Log.d("PARCELFD", "PDF Page Count: $pageCount")
-//
-//        val page = pdfRenderer.openPage(0)
-//        val pageWidth = page.width
-//        val pageHeight = page.height
-//        val res = context.resources
-//        val densityDpi = res.displayMetrics.densityDpi
-//        val DPI = 72
-//        val bitmap = newWhiteBitmap(pageWidth, pageHeight)
-//        page.render(bitmap, null, null, RENDER_MODE_FOR_DISPLAY)
-//        imageView.setImageBitmap(bitmap)
-//
-//        Log.d("PARCELFD", "Bitmap Rendering done.")
-////        // Get screen dimensions
-////        val screenWidth = getScreenWidth()
-////        val screenHeight = getScreenHeight()
-////
-////        // Parse the asset File
-////        val input = ParcelFileDescriptor.open(File(filePath), ParcelFileDescriptor.MODE_READ_ONLY)
-////
-////        // Create instance of PdfRenderer
-////        val renderer = PdfRenderer(input)
-////
-////        // Open page 0 and convert to Bitmap
-////        val page = renderer.openPage(0)
-////        val bitmap = Bitmap.createBitmap(screenWidth)
-//
-//    }
-
-    fun newWhiteBitmap(width: Int, height: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.WHITE)
-        canvas.drawBitmap(bitmap, 0f, 0f, null)
-        return bitmap
-    }
-
-//    fun generateImageBitmap(): Bitmap {
-//        val width = 200
-//        val height = 200
-//        val color = Color.RED // Replace with your desired color
-//
-//        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-//        val canvas = Canvas(bitmap)
-//        canvas.drawColor(color)
-//
-//        return bitmap
-//    }
-
     override fun onMethodCall(methodCall: MethodCall, result: MethodChannel.Result) {
         when (methodCall.method) {
-            "setUrl" -> setText(methodCall, result)
+            //"setUrl" -> setText(methodCall, result)
+            "getPageCount" -> result.success(numberOfPages)
+            "jumpToPage" -> jumpToPage(methodCall, result)
             else -> result.notImplemented()
         }
     }
 
-    // set and load new Url
-    private fun setText(methodCall: MethodCall, result: MethodChannel.Result ) {
-        val url = methodCall.arguments as String
-        webView.loadUrl(url)
-        result.success(null)
+    private fun jumpToPage(methodCall: MethodCall, result: MethodChannel.Result) {
+        val page = methodCall.arguments as Int
+        pdfView.jumpTo(page)
     }
+
+//    // set and load new Url
+//    private fun setText(methodCall: MethodCall, result: MethodChannel.Result ) {
+//        val url = methodCall.arguments as String
+//        webView.loadUrl(url)
+//        result.success(null)
+//    }
 
     // Destroy WebView when PlatformView is destroyed
     override fun dispose() {
         webView.destroy()
+    }
+
+    override fun loadComplete(nbPages: Int) {
+        Log.d("COREPDF", "Pdf loading loadComplete()")
+        numberOfPages = nbPages
+        methodChannel.invokeMethod("isReady", true)
+    }
+
+    override fun onPageChanged(page: Int, pageCount: Int) {
+        Log.d("COREPDF", "Pdf onPageChanged()")
+        methodChannel.invokeMethod("pageChanged", page)
     }
 }
