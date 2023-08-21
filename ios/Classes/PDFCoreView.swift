@@ -11,7 +11,6 @@ import UIKit
 import PDFKit
 
 class PDFCoreView: NSObject, FlutterPlatformView {
-    private var _nativeWebView: UIWebView
     private var _pdfCoreView: UIView
     private var _methodChannel: FlutterMethodChannel
     
@@ -26,45 +25,27 @@ class PDFCoreView: NSObject, FlutterPlatformView {
         binaryMessenger messenger: FlutterBinaryMessenger
     ) {
         
-        print("Imamo argumente! Vrednost je: \(args)")
-        let bts = args as! FlutterStandardTypedData
-        
-        let x = Data(bts.data)
+        //print("Native view got arguments from Flutter. Value is: \(args)")
+        //let bts = args as! FlutterStandardTypedData
+        let bts = args as! Array<String>
         
         let pdfCoreViewController = PDFCoreViewController()
-        pdfCoreViewController.pdfBytes = bts.data
+        //        pdfCoreViewController.pdfBytes = bts.data
         
+        pdfCoreViewController.paths = bts
         _pdfCoreView = pdfCoreViewController.view
-        _nativeWebView = UIWebView()
         _methodChannel = FlutterMethodChannel(name: "plugins.maticla/pdf_core_\(viewId)", binaryMessenger: messenger)
         pdfCoreViewController.mChannel = _methodChannel
         super.init()
         //_methodChannel.setMethodCallHandler(onMethodCall)
-        
     }
-    
-//    func onMethodCall(call: FlutterMethodCall, result: FlutterResult) {
-//        switch(call.method) {
-//        case "setUrl":
-//            setText(call:call, result:result)
-//        case "getPlatformVersion":
-//            result("iOS " + UIDevice.current.systemVersion)
-//        default:
-//            result(FlutterMethodNotImplemented)
-//        }
-//    }
-//
-//    func setText(call: FlutterMethodCall, result: FlutterResult){
-//        let url = call.arguments as! String
-//        _nativeWebView.loadRequest(NSURLRequest(url: NSURL(string: url)! as URL) as URLRequest)
-//    }
-    
 }
 
 class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
     
     var pdfView: CustomPDFViewSubclass = CustomPDFViewSubclass()
     var pdfBytes: Data?
+    var paths: Array<String>?
     var isReady: Bool = false
     
     var mChannel: FlutterMethodChannel? {
@@ -76,9 +57,6 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
     
     func onMethodCall(call: FlutterMethodCall, result: FlutterResult) {
         switch(call.method) {
-        case "setUrl":
-            print("Setting url")
-            result(FlutterMethodNotImplemented)
         case "getPlatformVersion":
             result("iOS " + UIDevice.current.systemVersion)
         case "getPageCount":
@@ -103,12 +81,11 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
         pdfView.frame = self.view.bounds
         
         removeScrollIndicators()
-
+        
         DispatchQueue.global().async {
-            //let temp = PDFDocument(url: URL(string: "https://www.cambridgeenglish.org/latinamerica/images/165873-yle-sample-papers-flyers-vol-1.pdf")!)
-            let temp = PDFDocument(data: self.pdfBytes!)
+            let finalMergedPdf = self.createPdfFromFilePaths(paths: self.paths!)
             DispatchQueue.main.async {
-                self.pdfView.document = temp
+                self.pdfView.document = finalMergedPdf
                 self.pdfView.displayMode = .singlePage
                 self.pdfView.displayDirection = .horizontal
                 self.pdfView.usePageViewController(true)
@@ -118,12 +95,12 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
                 self.pdfView.autoScales = true
                 self.isReady = true
                 self.mChannel!.invokeMethod("isReady", arguments: true)
-                print("done rendering")
+                print("PDFCore - Native - Done Rendering")
                 NotificationCenter.default.addObserver(
-                      self,
-                      selector: #selector(self.handlePageChange(notification:)),
-                      name: Notification.Name.PDFViewPageChanged,
-                      object: self.pdfView)
+                    self,
+                    selector: #selector(self.handlePageChange(notification:)),
+                    name: Notification.Name.PDFViewPageChanged,
+                    object: self.pdfView)
             }
         }
     }
@@ -136,7 +113,7 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
     func removeScrollIndicators() {
         for view in pdfView.subviews {
             if let scrollView = findUIScrollView(of: view) {
-                print("Yep")
+                // print("Yep")
                 scrollView.showsVerticalScrollIndicator = false
                 scrollView.showsHorizontalScrollIndicator = false
             }
@@ -159,11 +136,11 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
         }
         return nil
     }
-
+    
     
     @objc private func handlePageChange(notification: Notification) {
         let currentPageIndex = pdfView.document!.index(for: pdfView.currentPage!)
-        print("Page changed! Current page index: \(currentPageIndex)")
+        print("PDFCore - Native - Page changed! Current page index: \(currentPageIndex)")
         self.mChannel!.invokeMethod("pageChanged", arguments: currentPageIndex)
     }
     
@@ -173,9 +150,29 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
             self.pdfView.go(to: page)
         }
     }
-        
+    
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
+    }
+    
+    func createPdfFromFilePaths(paths: Array<String>) -> PDFDocument {
+        var sourcePDFDocuments: [PDFDocument] = []
+        let combinedPDFDocument = PDFDocument()
+        
+        for path in paths {
+            if let pdfDocument = PDFDocument(url: URL(fileURLWithPath: path)) {
+                sourcePDFDocuments.append(pdfDocument)
+            }
+        }
+        
+        for sourceDocument in sourcePDFDocuments {
+            for pageIndex in 0..<sourceDocument.pageCount {
+                if let page = sourceDocument.page(at: pageIndex) {
+                    combinedPDFDocument.insert(page, at: combinedPDFDocument.pageCount)
+                }
+            }
+        }
+        return combinedPDFDocument
     }
     
 }
@@ -185,7 +182,7 @@ class CustomPDFViewSubclass: PDFView {
     
     private var customTapGestureRecognizer: UITapGestureRecognizer!
     var mChannel: FlutterMethodChannel?
-            
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupCustomGestureRecognizers()
@@ -212,14 +209,23 @@ class CustomPDFViewSubclass: PDFView {
             let invertedY = currentPage!.bounds(for: .mediaBox).height - tapLocationInPDF.y
             let tapLocationInTopLeftOrigin = CGPoint(x: tapLocationInPDF.x, y: invertedY)
             
-            print(tapLocation)
-            print(tapLocationInPDF)
-            print(tapLocationInTopLeftOrigin)
+//            print(tapLocation)
+//            print(tapLocationInPDF)
+//            print(tapLocationInTopLeftOrigin)
             
-            let actualX = tapLocationInTopLeftOrigin.x
-            let actualY = tapLocationInTopLeftOrigin.y
+            let topLeftX = tapLocationInTopLeftOrigin.x
+            let topLeftY = tapLocationInTopLeftOrigin.y
             
-            mChannel?.invokeMethod("tap", arguments: [actualX, actualY])
+            let width = currentPage!.bounds(for: .mediaBox).width
+            let height = currentPage!.bounds(for: .mediaBox).height
+            
+            let bottomRightX = topLeftX + width
+            let bottomRightY = topLeftY + height
+            
+            print("x1: \(topLeftX), y1: \(topLeftY)")
+            print("x2: \(bottomRightX), y2: \(bottomRightY)")
+            
+            mChannel?.invokeMethod("tap", arguments: [topLeftX, topLeftY, bottomRightX, bottomRightY])
         }
     }
 }

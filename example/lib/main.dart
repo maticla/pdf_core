@@ -1,7 +1,11 @@
 // ignore_for_file: avoid_print
 
+import 'dart:io';
+
+import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:pdf_core/pdf_core.dart';
 
@@ -26,12 +30,74 @@ class _MyAppState extends State<MyApp> {
   bool isLoadingBytes = true;
   late Uint8List pdfUint8List;
   Offset tapPosition = const Offset(0, 0);
+  List<String> pdfFilePathList = [];
 
   @override
   void initState() {
     super.initState();
     //initPlatformState();
-    loadPdfFromAssets();
+    //loadPdfFromAssets();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final paths = await extractZipFromAssetToTempDir('assets/delo_test_pdf.zip');
+      setState(() {
+        isLoadingBytes = false;
+        pdfFilePathList = paths;
+      });
+    });
+  }
+
+  Future<List<String>> extractZipFromAssetToTempDir(String assetPath) async {
+    // Get the temporary directory
+    Directory tempDir = await getTemporaryDirectory();
+
+    // Load the ZIP file from the asset bundle
+    ByteData data = await rootBundle.load(assetPath);
+    List<int> bytes = data.buffer.asUint8List();
+
+    // Decode the ZIP archive
+    Archive archive = ZipDecoder().decodeBytes(Uint8List.fromList(bytes));
+
+    List<String> filePaths = [];
+
+    // Extract each entry in the archive
+    for (ArchiveFile file in archive) {
+      String fileName = '${tempDir.path}/${file.name}';
+      if (file.isFile) {
+        File extractedFile = File(fileName);
+        extractedFile.createSync(recursive: true);
+        extractedFile.writeAsBytesSync(file.content);
+
+        if (file.name.contains('pdf') && !file.name.contains('MACOSX') && !file.name.contains('ipad') && !file.name.contains('plak')) {
+          filePaths.add(fileName);
+        }
+      } else {
+        Directory extractedDir = Directory(fileName);
+        extractedDir.createSync(recursive: true);
+      }
+    }
+
+    print('ZIP file extracted from asset to temporary directory: ${tempDir.path}');
+
+    filePaths.sort();
+
+    for (String filePath in filePaths) {
+      print(filePath);
+    }
+
+    return filePaths;
+  }
+
+  void handlePageChange(int index) {
+    setState(() {
+      currentPage = index + 1;
+    });
+  }
+
+  void handleTap(double x, double y) {
+    print('Tapped at: $x, $y');
+    setState(() {
+      tapPosition = Offset(x, y);
+    });
   }
 
   // // Platform messages are asynchronous, so we initialize in an async method.
@@ -56,28 +122,15 @@ class _MyAppState extends State<MyApp> {
   //   });
   // }
 
-  void handlePageChange(int index) {
-    setState(() {
-      currentPage = index + 1;
-    });
-  }
-
-  void handleTap(double x, double y) {
-    print('Tapped at: $x, $y');
-    setState(() {
-      tapPosition = Offset(x, y);
-    });
-  }
-
-  Future<void> loadPdfFromAssets() async {
-    var data = await rootBundle.load('assets/ilovepdf_merged.pdf');
-    var bytes = data.buffer.asUint8List();
-    setState(() {
-      pdfUint8List = bytes;
-      isLoadingBytes = false;
-    });
-    print('Bytes: $bytes');
-  }
+  // Future<void> loadPdfFromAssets() async {
+  //   var data = await rootBundle.load('assets/ilovepdf_merged.pdf');
+  //   var bytes = data.buffer.asUint8List();
+  //   setState(() {
+  //     pdfUint8List = bytes;
+  //     isLoadingBytes = false;
+  //   });
+  //   print('Bytes: $bytes');
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +169,8 @@ class _MyAppState extends State<MyApp> {
                   Offstage(
                     offstage: isLoadingPdf,
                     child: PDFCoreEngine(
-                      pdfBytes: pdfUint8List,
+                      //pdfBytes: pdfUint8List,
+                      pdfFilePathList: pdfFilePathList,
                       onNativeViewCreated: (PDFCoreController controller) async {
                         await controller.isReady().then(
                           (_) async {

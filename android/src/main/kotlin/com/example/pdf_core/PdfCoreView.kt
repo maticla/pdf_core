@@ -1,20 +1,9 @@
 package com.example.pdf_core
 
-import android.R.attr.x
-import android.R.attr.y
 import android.content.Context
-import android.content.res.Resources
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.pdf.PdfRenderer.Page.*
-import android.os.ParcelFileDescriptor
-import android.provider.Telephony.Mms.Part.FILENAME
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener
 import com.github.barteksc.pdfviewer.listener.OnPageChangeListener
@@ -25,10 +14,11 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.platform.PlatformView
+import org.apache.pdfbox.io.MemoryUsageSetting
+import org.apache.pdfbox.multipdf.PDFMergerUtility
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
-import java.io.InputStream
+
 
 class PdfCoreView internal constructor(context: Context, messenger: BinaryMessenger, id: Int, args: Any?) : PlatformView, MethodCallHandler, OnLoadCompleteListener, OnPageChangeListener {
 
@@ -37,7 +27,8 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
 
     private var emptyView: View = View(context)
     private var numberOfPages: Int = 0
-    private lateinit var pdfView: PDFView
+    private var pdfView: PDFView
+    private val cacheDir: File
 
     override fun getView(): View {
         return emptyView
@@ -49,42 +40,26 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
         val view = inflater.inflate(R.layout.image_layout, null)
         pdfView = view.findViewById<PDFView>(R.id.pdfView)
 
-
-        // Set client so that you can interact within WebView
+        // Set client so that you can interact within PdfCore
         methodChannel = MethodChannel(messenger, "plugins.maticla/pdf_core_$id")
         // Init methodCall Listener
         methodChannel.setMethodCallHandler(this)
 
-        val pdfBytes = args as ByteArray
+        val pdfFilePaths = args as List<String>
 
-//        val file: File = File(context.cacheDir, FILENAME)
-//        if (!file.exists()) {
-//            var asset: InputStream? = null
-//            try {
-//                asset = context.resources.openRawResource(R.raw.ilovepdf_merged)
-//                var output: FileOutputStream? = null
-//                output = FileOutputStream(file)
-//                val buffer = ByteArray(1024)
-//                var size: Int
-//                while (asset.read(buffer).also { size = it } != -1) {
-//                    output.write(buffer, 0, size)
-//                }
-//                asset.close()
-//                output.close()
-//            } catch (e: IOException) {
-//                e.printStackTrace()
-//            }
-//        }
-//        val fdx = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+        cacheDir = context.cacheDir
+
+        val mergedPdfFile = mergePdf(pdfFilePaths)
 
         val core = PdfiumCore(context)
-        val doc = core.newDocument(pdfBytes)
+
+        val doc = core.newDocument(mergedPdfFile.readBytes())
 
         pdfView.useBestQuality(true)
         pdfView.maxZoom = 5.0F
         com.github.barteksc.pdfviewer.util.Constants.THUMBNAIL_RATIO = 1f
         com.github.barteksc.pdfviewer.util.Constants.PART_SIZE = 600f
-        pdfView.fromBytes(pdfBytes)
+        pdfView.fromFile(mergedPdfFile)
                 .onLoad(this)
                 .onPageChange(this)
                 .pageFitPolicy(FitPolicy.BOTH)
@@ -125,12 +100,16 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
                     val viewWidth: Float = pdfView.getPageSize(page).width
                     val viewHeight: Float = pdfView.getPageSize(page).height
 
-                    val resultX = (zoomX / viewWidth * pageWidth) - (pdfView.currentPage * pageWidth)
-                    val resultY = zoomY / viewHeight * pageHeight
+                    val topLeftX = (zoomX / viewWidth * pageWidth) - (pdfView.currentPage * pageWidth)
+                    val topLeftY = zoomY / viewHeight * pageHeight
 
-                    Log.d("COREPDFREADER", "X: $resultX, Y: $resultY")
+                    val bottomRightX = topLeftX + pageWidth
+                    val bottomRightY = topLeftY + pageHeight
 
-                    methodChannel.invokeMethod("tap", floatArrayOf(resultX, resultY))
+                    Log.d("COREPDF - COORDINATES 1", "X1: $topLeftX, Y1: $topLeftY")
+                    Log.d("COREPDF - COORDINATES 2", "X2: $bottomRightX, Y2: $bottomRightY")
+
+                    methodChannel.invokeMethod("tap", floatArrayOf(topLeftX, topLeftY, bottomRightX, bottomRightY))
 
                     true
                 }
@@ -139,9 +118,34 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
         emptyView = view
     }
 
+    private fun mergePdf(paths: List<String>): File {
+        val ut = PDFMergerUtility()
+
+        val fileList = mutableListOf<File>()
+
+        paths.forEach {
+            val temp = File(it)
+            fileList.add(temp)
+        }
+
+        fileList.forEach {
+            ut.addSource(it)
+        }
+
+        val file: File = File(cacheDir.path, "DELO" + ".pdf")
+        val fileOutputStream = FileOutputStream(file)
+
+        fileOutputStream.use { fileOutputStream ->
+            ut.destinationStream = fileOutputStream
+            ut.mergeDocuments(MemoryUsageSetting.setupTempFileOnly())
+        }
+        fileOutputStream.close()
+        Log.d("PDFMERGER", "merging done")
+        return file
+    }
+
     override fun onMethodCall(methodCall: MethodCall, result: MethodChannel.Result) {
         when (methodCall.method) {
-            //"setUrl" -> setText(methodCall, result)
             "getPageCount" -> result.success(numberOfPages)
             "jumpToPage" -> jumpToPage(methodCall, result)
             else -> result.notImplemented()
@@ -153,17 +157,6 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
         pdfView.jumpTo(page)
     }
 
-//    // set and load new Url
-//    private fun setText(methodCall: MethodCall, result: MethodChannel.Result ) {
-//        val url = methodCall.arguments as String
-//        webView.loadUrl(url)
-//        result.success(null)
-//    }
-
-    // Destroy WebView when PlatformView is destroyed
-    override fun dispose() {
-    }
-
     override fun loadComplete(nbPages: Int) {
         Log.d("COREPDF", "Pdf loading loadComplete()")
         numberOfPages = nbPages
@@ -173,5 +166,9 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
     override fun onPageChanged(page: Int, pageCount: Int) {
         Log.d("COREPDF", "Pdf onPageChanged()")
         methodChannel.invokeMethod("pageChanged", page)
+    }
+
+    override fun dispose() {
+        // TODO: Handle dispose if needed
     }
 }

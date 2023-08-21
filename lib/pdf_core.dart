@@ -19,10 +19,12 @@ typedef FlutterPDFCoreEngineCreatedCallback = void Function(PDFCoreController co
 class PDFCoreEngine extends StatelessWidget {
   final FlutterPDFCoreEngineCreatedCallback onNativeViewCreated;
   final Uint8List? pdfBytes;
+  final List<String>? pdfFilePathList;
   const PDFCoreEngine({
     Key? key,
     required this.onNativeViewCreated,
     this.pdfBytes,
+    this.pdfFilePathList,
   }) : super(key: key);
 
   @override
@@ -32,14 +34,15 @@ class PDFCoreEngine extends StatelessWidget {
         return AndroidView(
           viewType: 'plugins.maticla/pdf_core',
           onPlatformViewCreated: _onPlatformViewCreated,
-          creationParams: pdfBytes,
+          creationParams: pdfFilePathList,
           creationParamsCodec: const StandardMessageCodec(),
         );
       case TargetPlatform.iOS:
         return UiKitView(
           viewType: 'plugins.maticla/pdf_core',
           onPlatformViewCreated: _onPlatformViewCreated,
-          creationParams: pdfBytes,
+          //creationParams: pdfBytes,
+          creationParams: pdfFilePathList,
           creationParamsCodec: const StandardMessageCodec(),
         );
       default:
