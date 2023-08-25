@@ -15,6 +15,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.platform.PlatformView
 import org.apache.pdfbox.io.MemoryUsageSetting
+import org.apache.pdfbox.io.RandomAccessStreamCacheImpl
 import org.apache.pdfbox.multipdf.PDFMergerUtility
 import java.io.File
 import java.io.FileOutputStream
@@ -135,9 +136,11 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
         val file: File = File(cacheDir.path, "DELO" + ".pdf")
         val fileOutputStream = FileOutputStream(file)
 
+        val rasc = RandomAccessStreamCacheImpl()
+
         fileOutputStream.use { fileOutputStream ->
             ut.destinationStream = fileOutputStream
-            ut.mergeDocuments(MemoryUsageSetting.setupTempFileOnly())
+            ut.mergeDocuments { rasc }
         }
         fileOutputStream.close()
         Log.d("PDFMERGER", "merging done")
