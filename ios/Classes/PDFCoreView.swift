@@ -181,6 +181,8 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
 class CustomPDFViewSubclass: PDFView {
     
     private var customTapGestureRecognizer: UITapGestureRecognizer!
+    private var doubleTapGestureRecognizer: UITapGestureRecognizer!
+    
     var mChannel: FlutterMethodChannel?
     
     override init(frame: CGRect) {
@@ -195,7 +197,20 @@ class CustomPDFViewSubclass: PDFView {
     
     private func setupCustomGestureRecognizers() {
         customTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleCustomTap(_:)))
+        doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        doubleTapGestureRecognizer.numberOfTapsRequired = 2
+        customTapGestureRecognizer.require(toFail: doubleTapGestureRecognizer)
         addGestureRecognizer(customTapGestureRecognizer)
+        addGestureRecognizer(doubleTapGestureRecognizer)
+    }
+
+    @objc private func handleDoubleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        // Handle the double tap gesture here
+       if self.scaleFactor < self.maximumScaleFactor {
+            self.scaleFactor *= 2.0
+        } else {
+            self.scaleFactor = self.minScaleFactor
+        }
     }
     
     @objc private func handleCustomTap(_ gestureRecognizer: UITapGestureRecognizer) {
