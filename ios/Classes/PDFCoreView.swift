@@ -205,8 +205,8 @@ class CustomPDFViewSubclass: PDFView {
     }
 
     @objc private func handleDoubleTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        // Handle the double tap gesture here
-       if self.scaleFactor < self.maximumScaleFactor {
+        // Handle the double tap gesture here        
+        if self.scaleFactor < self.maxScaleFactor {
             self.scaleFactor *= 2.0
         } else {
             self.scaleFactor = self.minScaleFactor
