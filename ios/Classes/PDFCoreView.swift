@@ -63,6 +63,8 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
             result(pdfView.document?.pageCount)
         case "jumpToPage":
             jumpToPage(call: call, result: result)
+        case "appendFiles":
+            appendPdfPages(call: call, result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -173,6 +175,23 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
             }
         }
         return combinedPDFDocument
+    }
+    
+    
+    func appendPdfPages(call: FlutterMethodCall, result: FlutterResult) {
+        print("Calling appendPdfPage on Swift native side")
+        let pages = call.arguments as! [String]
+        
+        let newDoc = createPdfFromFilePaths(paths: pages)
+        
+        if let currentDocument = self.pdfView.document {
+            for pageIndex in 0..<newDoc.pageCount {
+                if let page = newDoc.page(at: pageIndex) {
+                    currentDocument.insert(page, at: currentDocument.pageCount)
+                }
+            }
+            self.pdfView.document = currentDocument
+        }
     }
     
 }
