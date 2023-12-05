@@ -198,7 +198,7 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
         Log.d("JUMP", "Jump to page called")
         val page = methodCall.arguments as Int
 //        pdfView.jumpTo(page)
-        pager.setCurrentItem(2, true)
+        pager.setCurrentItem(page, true)
     }
 
     private fun appendFiles(methodCall: MethodCall, result: MethodChannel.Result) {
