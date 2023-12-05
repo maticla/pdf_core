@@ -198,7 +198,7 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
         Log.d("JUMP", "Jump to page called")
         val page = methodCall.arguments as Int
 //        pdfView.jumpTo(page)
-        pager.setCurrentItem(page, true)
+        pager.setCurrentItem(page, false)
     }
 
     private fun appendFiles(methodCall: MethodCall, result: MethodChannel.Result) {
@@ -258,9 +258,15 @@ class PDFViewPagerAdapter(private val pdfFiles: MutableList<File>, private val c
 
     private fun createPDFConfigurator(pdfView: PDFView, position: Int): PDFView.Configurator {
         val doc = core.newDocument(pdfFiles[position].readBytes())
+        pdfView.useBestQuality(true)
+        pdfView.maxZoom = 5.0F
+        com.github.barteksc.pdfviewer.util.Constants.THUMBNAIL_RATIO = 1f
+        com.github.barteksc.pdfviewer.util.Constants.PART_SIZE = 600f
         return pdfView.fromFile(pdfFiles[position])
                 .pageFitPolicy(FitPolicy.BOTH)
                 .fitEachPage(true)
+                .enableDoubletap(true)
+                .enableAntialiasing(true)
                 .onTap { e ->
                     Log.d("PDF", "TAP $e")
                         val offsetX: Float = pdfView.currentXOffset
