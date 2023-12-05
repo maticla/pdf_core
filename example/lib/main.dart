@@ -3,6 +3,7 @@
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -38,7 +39,7 @@ class _MyAppState extends State<MyApp> {
     //initPlatformState();
     //loadPdfFromAssets();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final paths = await extractZipFromAssetToTempDir('assets/delo_test_pdf.zip');
+      final paths = await extractZipFromAssetToTempDir('assets/vikend.zip');
       setState(() {
         isLoadingBytes = false;
         pdfFilePathList = paths;
@@ -136,6 +137,18 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // home: Scaffold(
+      //   body: Center(
+      //     child: CachedNetworkImage(
+      //       imageUrl: 'https://app-service.delo.si/protected_files/pdf/14508/489964/hq_vikend_20230901_08.jpg',
+      //       httpHeaders: const {
+      //         'Device-ID': 'asdfghjkl',
+      //         'AppName': 'delo/%@',
+      //         'Device-Type': 'Android',
+      //       },
+      //     )
+      //   ),
+      // ),
       home: Scaffold(
         appBar: AppBar(
           leadingWidth: 100.0,
@@ -201,8 +214,25 @@ class _MyAppState extends State<MyApp> {
               ),
         floatingActionButton: FloatingActionButton(
           child: const Icon(Icons.undo),
-          onPressed: () {
-            c?.jumpToPage(0);
+          onPressed: () async {
+            //c?.jumpToPage(0);
+            setState(() {
+              isLoadingPdf = false;
+            });
+            //final _ = await c?.appendFiles();
+            // await c?.appendFiles([pdfFilePathList.first]).then((_) async {
+            //   final count = await c?.getPageCount();
+            //   print('COUNT ${count}');
+            //   setState(() {
+            //     pageCount = count!;
+            //   });
+            // });
+
+            print('PATH: ${pdfFilePathList.first}');
+
+            await c?.appendFiles([pdfFilePathList.first]);
+            
+            // await c?.jumpToPage(2);
           },
         ),
       ),

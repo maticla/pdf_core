@@ -90,4 +90,8 @@ class PDFCoreController {
   Future<void> jumpToPage(int pageNumber) async {
     return _channel.invokeMethod('jumpToPage', pageNumber);
   }
+
+  Future<void> appendFiles(List<String> filePaths) async {
+    return _channel.invokeMethod('appendFiles', filePaths);
+  }
 }
