@@ -63,7 +63,11 @@ class PdfCoreView internal constructor(context: Context, messenger: BinaryMessen
 
         val view2 = inflater.inflate(layout.pager_layout, null)
         pager = view2.findViewById<ViewPager>(R.id.myViewPager)
-        val pdfFiles = mutableListOf(File(pdfFilePaths[0]), File(pdfFilePaths[1]), File(pdfFilePaths[2])) // replace with your initial PDF files
+        val filesFromPaths: MutableList<File> = mutableListOf()
+        pdfFilePaths.forEach {
+            filesFromPaths.add(File(it))
+        }
+        val pdfFiles = filesFromPaths // replace with your initial PDF files
         adapter = PDFViewPagerAdapter(pdfFiles, core, methodChannel)
         pager.adapter = adapter
 
