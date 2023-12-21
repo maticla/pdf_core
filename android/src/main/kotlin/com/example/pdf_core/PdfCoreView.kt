@@ -258,15 +258,16 @@ class PDFViewPagerAdapter(private val pdfFiles: MutableList<File>, private val c
 
     private fun createPDFConfigurator(pdfView: PDFView, position: Int): PDFView.Configurator {
         val doc = core.newDocument(pdfFiles[position].readBytes())
-        pdfView.useBestQuality(true)
+        pdfView.useBestQuality(false)
         pdfView.maxZoom = 5.0F
-        com.github.barteksc.pdfviewer.util.Constants.THUMBNAIL_RATIO = 1f
-        com.github.barteksc.pdfviewer.util.Constants.PART_SIZE = 600f
+        com.github.barteksc.pdfviewer.util.Constants.THUMBNAIL_RATIO = 0.3f
+        com.github.barteksc.pdfviewer.util.Constants.PART_SIZE = 400f
+        com.github.barteksc.pdfviewer.util.Constants.PRELOAD_OFFSET = 0
         return pdfView.fromFile(pdfFiles[position])
                 .pageFitPolicy(FitPolicy.BOTH)
                 .fitEachPage(true)
                 .enableDoubletap(true)
-                .enableAntialiasing(true)
+                .enableAntialiasing(false)
                 .onTap { e ->
                     Log.d("PDF", "TAP $e")
                         val offsetX: Float = pdfView.currentXOffset
