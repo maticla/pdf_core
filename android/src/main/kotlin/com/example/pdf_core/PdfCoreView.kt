@@ -259,7 +259,7 @@ class PDFViewPagerAdapter(private val pdfFiles: MutableList<File>, private val c
     private fun createPDFConfigurator(pdfView: PDFView, position: Int): PDFView.Configurator {
         val doc = core.newDocument(pdfFiles[position].readBytes())
         pdfView.useBestQuality(false)
-        pdfView.maxZoom = 5.0F
+        pdfView.maxZoom = 50.0F
         com.github.barteksc.pdfviewer.util.Constants.THUMBNAIL_RATIO = 0.3f
         com.github.barteksc.pdfviewer.util.Constants.PART_SIZE = 400f
         com.github.barteksc.pdfviewer.util.Constants.PRELOAD_OFFSET = 0
