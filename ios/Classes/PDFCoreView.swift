@@ -93,8 +93,10 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
                 self.pdfView.usePageViewController(true)
                 self.pdfView.backgroundColor = .white
                 self.pdfView.minScaleFactor = 1.0
+                self.pdfView.maxScaleFactor = 10.0
                 self.pdfView.minScaleFactor = self.pdfView.scaleFactorForSizeToFit
                 self.pdfView.autoScales = true
+                self.pdfView.enableDataDetectors = true
                 self.isReady = true
                 self.mChannel!.invokeMethod("isReady", arguments: true)
                 print("PDFCore - Native - Done Rendering")
@@ -220,7 +222,7 @@ class CustomPDFViewSubclass: PDFView {
         doubleTapGestureRecognizer.numberOfTapsRequired = 2
         customTapGestureRecognizer.require(toFail: doubleTapGestureRecognizer)
         addGestureRecognizer(customTapGestureRecognizer)
-        addGestureRecognizer(doubleTapGestureRecognizer)
+        //addGestureRecognizer(doubleTapGestureRecognizer)
     }
 
     @objc private func handleDoubleTap(_ gestureRecognizer: UITapGestureRecognizer) {
