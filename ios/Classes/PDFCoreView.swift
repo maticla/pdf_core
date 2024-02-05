@@ -203,7 +203,8 @@ class CustomPDFViewSubclass: PDFView {
     
     private var customTapGestureRecognizer: UITapGestureRecognizer!
     private var doubleTapGestureRecognizer: UITapGestureRecognizer!
-    
+    private var leftSwipeGesture: UISwipeGestureRecognizer!
+        
     var mChannel: FlutterMethodChannel?
     
     override init(frame: CGRect) {
@@ -219,15 +220,66 @@ class CustomPDFViewSubclass: PDFView {
     private func setupCustomGestureRecognizers() {
         customTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleCustomTap(_:)))
         doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        
+        leftSwipeGesture = UISwipeGestureRecognizer(target: self, action: #selector(handleLeftSwipe(_:)))
+        leftSwipeGesture.direction = .left
+        leftSwipeGesture.delegate = self
+        leftSwipeGesture.cancelsTouchesInView = false
+        
         doubleTapGestureRecognizer.numberOfTapsRequired = 2
         customTapGestureRecognizer.require(toFail: doubleTapGestureRecognizer)
         addGestureRecognizer(customTapGestureRecognizer)
+        addGestureRecognizer(leftSwipeGesture)
         //addGestureRecognizer(doubleTapGestureRecognizer)
         
         for gesture in self.gestureRecognizers ?? [] {
             if let tapGesture = gesture as? UITapGestureRecognizer, tapGesture.numberOfTapsRequired == 2 {
                 customTapGestureRecognizer.require(toFail: tapGesture)
             }
+        }
+    }
+    
+    override func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                                    shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return gestureRecognizer == leftSwipeGesture
+            || otherGestureRecognizer == leftSwipeGesture
+    }
+
+    override func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                                    shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let _ = gestureRecognizer as? UIPanGestureRecognizer else { return false }
+        return otherGestureRecognizer == leftSwipeGesture
+    }
+
+    override func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                                    shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let _ = otherGestureRecognizer as? UIPanGestureRecognizer else { return false }
+        return gestureRecognizer == leftSwipeGesture
+    }
+    
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer == leftSwipeGesture {
+            let point = gestureRecognizer.location(in: self)
+            let margin: CGFloat = 20 // Adjust this value to increase or decrease the sensitive edge area
+
+            if gestureRecognizer == leftSwipeGesture {
+                return point.x > self.bounds.width - margin
+            }
+        }
+        return true
+    }
+    
+    
+    @objc private func handleLeftSwipe(_ sender: UISwipeGestureRecognizer) {
+        print("Left swipe handler called!")
+        
+        let point = sender.location(in: self)
+        let margin: CGFloat = 20 // Adjust this value to increase or decrease the sensitive edge area
+        
+        print(point.x)
+
+        if point.x > self.bounds.width - margin {
+            self.goToNextPage(self)
         }
     }
 
