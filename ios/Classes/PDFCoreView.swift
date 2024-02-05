@@ -223,6 +223,12 @@ class CustomPDFViewSubclass: PDFView {
         customTapGestureRecognizer.require(toFail: doubleTapGestureRecognizer)
         addGestureRecognizer(customTapGestureRecognizer)
         //addGestureRecognizer(doubleTapGestureRecognizer)
+        
+        for gesture in self.gestureRecognizers ?? [] {
+            if let tapGesture = gesture as? UITapGestureRecognizer, tapGesture.numberOfTapsRequired == 2 {
+                customTapGestureRecognizer.require(toFail: tapGesture)
+            }
+        }
     }
 
     @objc private func handleDoubleTap(_ gestureRecognizer: UITapGestureRecognizer) {
