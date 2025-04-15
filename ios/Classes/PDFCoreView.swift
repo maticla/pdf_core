@@ -39,6 +39,11 @@ class PDFCoreView: NSObject, FlutterPlatformView {
         super.init()
         //_methodChannel.setMethodCallHandler(onMethodCall)
     }
+
+    deinit {
+        print("PDFCoreView deinit called")
+        _methodChannel.setMethodCallHandler(nil)
+    }
 }
 
 class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
@@ -50,8 +55,10 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
     
     var mChannel: FlutterMethodChannel? {
         didSet {
-            mChannel!.setMethodCallHandler(onMethodCall)
-            pdfView.mChannel = mChannel!
+            if mChannel != nil {
+                mChannel!.setMethodCallHandler(onMethodCall)
+                pdfView.mChannel = mChannel!
+            }
         }
     }
     
@@ -68,6 +75,15 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        print("PDFCoreViewController deinit called")
+        pdfView.cleanup()
+        mChannel?.setMethodCallHandler(nil)
+        mChannel = nil
+        pdfView.document = nil
     }
     
     override func viewDidLoad() {
@@ -268,6 +284,20 @@ class CustomPDFViewSubclass: PDFView {
             }
         }
         return true
+    }
+
+    func cleanup() {
+        if customTapGestureRecognizer != nil {
+            removeGestureRecognizer(customTapGestureRecognizer)
+        }
+        if doubleTapGestureRecognizer != nil {
+            removeGestureRecognizer(doubleTapGestureRecognizer)
+        }
+        if leftSwipeGesture != nil {
+            removeGestureRecognizer(leftSwipeGesture)
+        }
+        document = nil
+        mChannel = nil
     }
     
     
