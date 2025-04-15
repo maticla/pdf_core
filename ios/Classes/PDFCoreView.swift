@@ -50,15 +50,8 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
     
     var mChannel: FlutterMethodChannel? {
         didSet {
-            if let channel = mChannel {
-                channel.setMethodCallHandler { [weak self] call, result in
-                    self?.onMethodCall(call: call, result: result)
-                }
-                pdfView.mChannel = channel
-            } else {
-                oldValue?.setMethodCallHandler(nil)
-                pdfView.mChannel = nil
-            }
+            mChannel!.setMethodCallHandler(onMethodCall)
+            pdfView.mChannel = mChannel!
         }
     }
     
@@ -72,34 +65,6 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
             jumpToPage(call: call, result: result)
         case "appendFiles":
             appendPdfPages(call: call, result: result)
-        case "disposeView":
-            print("PDFCoreViewController - Explicit disposeView called from Dart")
-
-            NotificationCenter.default.removeObserver(self)
-            
-            mChannel?.setMethodCallHandler(nil)
-            
-            pdfView.document = nil
-            pdfView.removeFromSuperview()
-            
-            for subview in self.view.subviews {
-                subview.removeFromSuperview()
-            }
-            
-            if let gestures = pdfView.gestureRecognizers {
-                for gesture in gestures {
-                    gesture.delegate = nil
-                    pdfView.removeGestureRecognizer(gesture)
-                }
-            }
-            
-            pdfBytes = nil
-            paths = nil
-            
-            pdfView.mChannel = nil
-            mChannel = nil
-            
-            result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
