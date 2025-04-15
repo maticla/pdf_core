@@ -108,6 +108,12 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
             }
         }
     }
+
+    deinit {
+        print("deinit called - removing observer")
+        // remove strong reference to pdfView
+        NotificationCenter.default.removeObserver(self, name: Notification.Name.PDFViewPageChanged, object: self.pdfView)
+    }
     
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
