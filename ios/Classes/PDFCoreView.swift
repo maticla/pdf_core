@@ -65,27 +65,9 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
             jumpToPage(call: call, result: result)
         case "appendFiles":
             appendPdfPages(call: call, result: result)
-        case "disposeReader":
-            disposeReader()
-            result(true)
         default:
             result(FlutterMethodNotImplemented)
         }
-    }
-
-    func disposeReader() {
-        print("Disposing PDFCoreViewController")
-        // 1. Remove the notification observer
-        NotificationCenter.default.removeObserver(self, name: Notification.Name.PDFViewPageChanged, object: pdfView)
-                
-        // 3. Explicitly release the PDF document
-        pdfView.document = nil
-
-        pdfBytes = nil
-        paths = nil
-        
-        // 4. Remove the view from hierarchy
-        pdfView.removeFromSuperview()
     }
     
     override func viewDidLoad() {
