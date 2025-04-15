@@ -81,16 +81,12 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
             
             // Clear gesture recognizers
             pdfView.gestureRecognizers?.forEach { pdfView.removeGestureRecognizer($0) }
-            
-            // Break method channel cycle
-            mChannel?.setMethodCallHandler(nil)
-            mChannel = nil
-            
+                        
             // Clear any stored data
             pdfBytes = nil
             paths = nil
             
-            result(nil)// Break channel cycle
+            result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
