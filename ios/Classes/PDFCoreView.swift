@@ -51,10 +51,11 @@ class PDFCoreViewController: UIViewController, UIGestureRecognizerDelegate {
     var mChannel: FlutterMethodChannel? {
         didSet {
             if let channel = mChannel {
-                channel.setMethodCallHandler(onMethodCall)
+                channel.setMethodCallHandler { [weak self] call, result in
+                    self?.onMethodCall(call: call, result: result)
+                }
                 pdfView.mChannel = channel
             } else {
-                // Clean up when setting to nil
                 oldValue?.setMethodCallHandler(nil)
                 pdfView.mChannel = nil
             }
