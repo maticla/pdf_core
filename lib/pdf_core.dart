@@ -94,4 +94,8 @@ class PDFCoreController {
   Future<void> appendFiles(List<String> filePaths) async {
     return _channel.invokeMethod('appendFiles', filePaths);
   }
+
+  Future<void> disposeView() async {
+    return _channel.invokeMethod('disposeView');
+  }
 }
